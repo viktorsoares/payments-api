@@ -3,6 +3,7 @@ import { PaymentRepository } from '../repositories/payment.repository';
 import { MercadoPagoService } from '../services/mercadopago.service';
 import { PaymentStatus } from '../domain/payment.enums';
 import { Payment } from '../domain/payment.entity';
+import * as mercadopagoTypes from '../interfaces/mercadopago.types';
 
 @Controller('api/webhooks/mercadopago')
 export class WebhookController {
@@ -14,29 +15,33 @@ export class WebhookController {
   ) {}
 
   @Post('notification')
-  async handleNotification(@Body() body: any) {
+  async handleNotification(
+    @Body() body: mercadopagoTypes.MercadoPagoWebhookBody,
+  ) {
     this.logger.log(`Webhook recebido JSON: ${JSON.stringify(body)}`);
 
+    // --- Fluxo de pagamento ---
     if (body.topic === 'payment') {
-      const paymentId = body.data?.id ?? body.resource;
+      const paymentId: string | undefined = body.data?.id ?? body.resource;
       if (!paymentId) {
         this.logger.warn('Webhook sem ID válido; evento ignorado.');
         return;
       }
 
-      const mpPayment = await this.mercadoPagoService.getPaymentById(paymentId);
+      const mpPayment: mercadopagoTypes.MercadoPagoPaymentResponse =
+        await this.mercadoPagoService.getPaymentById(paymentId);
 
       let internalPayment: Payment | null = null;
 
       if (mpPayment.external_reference) {
         internalPayment = await this.paymentRepository.findById(
-          mpPayment.external_reference,
+          String(mpPayment.external_reference),
         );
       }
 
       if (!internalPayment && mpPayment.preference_id) {
         internalPayment = await this.paymentRepository.findByPreferenceId(
-          mpPayment.preference_id,
+          String(mpPayment.preference_id),
         );
         if (internalPayment) {
           this.logger.log(
@@ -67,16 +72,17 @@ export class WebhookController {
       }
     }
 
+    // --- Fluxo de merchant_order ---
     if (body.topic === 'merchant_order') {
-      const resourceUrl = body.resource;
-      const orderId = resourceUrl?.split('/').pop();
+      const resourceUrl: string = String(body.resource ?? '');
+      const orderId: string | undefined = resourceUrl.split('/').pop();
 
       if (!orderId) {
         this.logger.warn('Webhook merchant_order sem ID válido.');
         return;
       }
 
-      const merchantOrder =
+      const merchantOrder: mercadopagoTypes.MercadoPagoMerchantOrderResponse =
         await this.mercadoPagoService.getMerchantOrderById(orderId);
 
       if (!merchantOrder.payments || merchantOrder.payments.length === 0) {
@@ -88,7 +94,7 @@ export class WebhookController {
       }
 
       const approvedPayment = merchantOrder.payments.find(
-        (p: any) => p.status === 'approved',
+        (p) => p.status === 'approved',
       );
 
       if (approvedPayment) {
@@ -96,13 +102,13 @@ export class WebhookController {
 
         if (approvedPayment.external_reference) {
           internalPayment = await this.paymentRepository.findById(
-            approvedPayment.external_reference,
+            String(approvedPayment.external_reference),
           );
         }
 
         if (!internalPayment && merchantOrder.preference_id) {
           internalPayment = await this.paymentRepository.findByPreferenceId(
-            merchantOrder.preference_id,
+            String(merchantOrder.preference_id),
           );
           if (internalPayment) {
             this.logger.log(
