@@ -31,6 +31,9 @@ src/
 │   ├── create-payment.dto.ts
 │   ├── update-payment.dto.ts
 │   └── list-payment.dto.ts
+├── interfaces/
+│   ├── mercadopago-webhook.interface.ts
+│   └── preference-responsive.interface.ts
 ├── repositories/
 │   └── payment.repository.ts
 ├── services/
