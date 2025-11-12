@@ -1,7 +1,7 @@
 # Payments API
 
-API desenvolvida em NestJS para gerenciamento de pagamentos integrada ao Mercado Pago.  
-O projeto segue uma arquitetura organizada com controllers, use cases, repositories e services.
+API desenvolvida em NestJS para gerenciamento de pagamentos integrada ao Mercado Pago e ao Temporal para orquestração de workflows assíncronos.  
+O projeto segue uma arquitetura organizada com controllers, use cases, repositories e services, garantindo escalabilidade e separação de responsabilidades.
 
 ---
 
@@ -11,48 +11,68 @@ O projeto segue uma arquitetura organizada com controllers, use cases, repositor
 - PostgreSQL — banco relacional
 - Axios — requisições HTTP
 - Mercado Pago API — integração de pagamentos
+- Temporal — orquestração de workflows e atividades assíncronas
 - Jest — testes unitários e de integração
 - Ngrok — exposição de endpoints locais para testes de webhooks
+- Docker Compose — gerenciamento de containers (Postgres, Temporal, Worker)
 
 ---
 
 ## Estrutura do projeto
 
-```
-src/
-├── controllers/
-│   ├── payment.controller.ts
-│   ├── webhook.controller.ts
-│   └── mercadopago-return.controller.ts
-├── domain/
-│   ├── payment.entity.ts
-│   └── payment.enums.ts
-├── dtos/
-│   ├── create-payment.dto.ts
-│   ├── update-payment.dto.ts
-│   └── list-payment.dto.ts
-├── interfaces/
-│   ├── mercadopago-webhook.interface.ts
-│   └── preference-responsive.interface.ts
-├── repositories/
-│   └── payment.repository.ts
-├── services/
-│   └── mercadopago.service.ts
-├── usecases/
-│   ├── create-payment.usecase.ts
-│   ├── get-payment.usecase.ts
-│   ├── list-payments.usecase.ts
-│   └── update-payment.usecase.ts
-├── app.module.ts
-├── app.controller.ts
-├── app.service.ts
-├── tests
+payments-api/
+├── src/
+│   ├── activities/
+│   │   └── paymentActivities.ts
+│   ├── controllers/
+│   │   ├── payment.controller.ts
+│   │   ├── webhook.controller.ts
+│   │   └── mercadopago-return.controller.ts
+│   ├── domain/
+│   │   ├── payment.entity.ts
+│   │   └── payment.enums.ts
+│   ├── dtos/
+│   │   ├── create-payment.dto.ts
+│   │   ├── update-payment.dto.ts
+│   │   └── list-payment.dto.ts
+│   ├── interfaces/
+│   │   ├── mercadopago-webhook.interface.ts
+│   │   ├── mercadopago.types.ts
+│   │   └── preference-responsive.interface.ts
+│   ├── lib/
+│   │   └── temporalClient.ts
+│   ├── repositories/
+│   │   └── payment.repository.ts
+│   ├── services/
+│   │   └── mercadopago.service.ts
+│   ├── usecases/
+│   │   ├── create-payment.usecase.ts
+│   │   ├── get-payment.usecase.ts
+│   │   ├── list-payments.usecase.ts
+│   │   └── update-payment.usecase.ts
+│   ├── workflows/
+│   │   └── payment.workflow.ts
+│   ├── app.module.ts
+│   ├── app.controller.ts
+│   ├── app.service.ts
+│   └── main.ts
+├── infra/
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   └── Dockerfile.worker
+├── tests/
 │   ├── app.e2e-spec.ts
 │   ├── appController-spec.ts
-│   ├── create-payment.usecase-spec.ts
-└── main.ts
+│   └── create-payment.usecase-spec.ts
+├── worker/
+│   └── index.ts
+├── .env
+├── package.json
+├── tsconfig.json
+└── README.md
 
-```
+
+---
 
 ---
 
@@ -82,11 +102,6 @@ MERCADO_PAGO_NOTIFICATION_URL=https://SEU-ENDERECO-NGROK/api/webhooks/mercadopag
 - `GET /api/payment/:id` — busca pagamento por ID
 - `PUT /api/payment/:id` — atualiza pagamento
 
-### MercadoPagoReturnController (`/api/webhooks/mercadopago`)
-- `GET /success` — retorno de pagamento aprovado
-- `GET /failure` — retorno de pagamento falhou
-- `GET /pending` — retorno de pagamento pendente
-
 ### WebhookController (`/api/webhooks/mercadopago`)
 - `POST /notification` — recebe notificações do Mercado Pago (pagamentos e merchant_order)
 
@@ -104,10 +119,12 @@ npm run test
 
 ## Fluxo de pagamento
 
-1. O cliente cria um pagamento via `POST /api/payment`.
-2. Se for **PIX**, o status inicial é `PENDING`.
-3. Se for **cartão de crédito**, é criada uma *preference* no Mercado Pago e retornada a `checkoutUrl`.
-4. O Mercado Pago envia notificações para `/api/webhooks/mercadopago/notification` (via ngrok).
-5. A API atualiza o status interno (`PAID`, `FAIL`, `PENDING`) conforme o retorno.
+1. O cliente cria um pagamento via `POST /api/payment`.  
+2. Se for **PIX**, o status inicial é `PENDING`.  
+3. Se for **cartão de crédito**, é criada uma **preference** no Mercado Pago e retornada a `checkoutUrl`.  
+4. O Mercado Pago envia notificações para `/api/webhooks/mercadopago/notification` (via **ngrok**).  
+5. A API atualiza o status interno (`PAID`, `FAIL`, `PENDING`) conforme o retorno.  
+6. O **Temporal Worker** processa workflows de pagamento, garantindo resiliência e reprocessamento automático em caso de falhas.  
+7. Logs e execução podem ser acompanhados via **Temporal Web UI** (`http://localhost:8233`).  
 
 ---
