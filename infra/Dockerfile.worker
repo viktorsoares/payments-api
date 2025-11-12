@@ -3,8 +3,11 @@ FROM node:20-bullseye
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+
+RUN npm ci
 
 COPY . .
+
+RUN npm rebuild @swc/core --force
 
 CMD ["npx", "ts-node", "worker/index.ts"]

@@ -30,6 +30,7 @@
     "@nestjs/typeorm": "^11.0.0",
     "@swc/core": "^1.15.1",
     "@temporalio/client": "^1.13.2",
+    "@temporalio/common": "^1.13.2",
     "@temporalio/worker": "^1.13.2",
     "@temporalio/workflow": "^1.13.2",
     "class-transformer": "^0.5.1",

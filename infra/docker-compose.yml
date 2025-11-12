@@ -1,23 +1,33 @@
+version: "3.9"
+
 services:
   postgres:
     image: postgres:15
+    container_name: payments-postgres
     environment:
       POSTGRES_USER: payments_user
       POSTGRES_PASSWORD: 123
       POSTGRES_DB: payments_db
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
   temporal:
     image: temporalio/auto-setup:latest
+    container_name: temporal
     ports:
-      - "7233:7233"   # servidor Temporal
+      - "7233:7233"   # Servidor Temporal
       - "8233:8233"
     environment:
       - DB=postgresql
       - POSTGRES_USER=temporal
       - POSTGRES_PASSWORD=temporal
       - POSTGRES_DB=temporal
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
+    depends_on:
+      - postgres
 
   temporal-worker:
     build:
@@ -25,11 +35,18 @@ services:
       dockerfile: infra/Dockerfile.worker
     container_name: temporal-worker
     command: npx ts-node worker/index.ts
+    working_dir: /app
     volumes:
       - ..:/app
-    working_dir: /app
     env_file:
       - ../.env
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - NODE_ENV=development
     depends_on:
       - temporal
       - postgres
+    restart: on-failure
+
+volumes:
+  pgdata:
