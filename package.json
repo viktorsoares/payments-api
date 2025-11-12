@@ -20,12 +20,18 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
+    "@swc/core": "^1.15.1",
+    "@temporalio/client": "^1.13.2",
+    "@temporalio/worker": "^1.13.2",
+    "@temporalio/workflow": "^1.13.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "mercadopago": "^2.10.0",

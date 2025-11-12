@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: payments_user
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: payments_db
+    ports:
+      - "5432:5432"
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    ports:
+      - "7233:7233"   # servidor Temporal
+      - "8233:8233"
+    environment:
+      - DB=postgresql
+      - POSTGRES_USER=temporal
+      - POSTGRES_PASSWORD=temporal
+      - POSTGRES_DB=temporal
+
+  temporal-worker:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.worker
+    container_name: temporal-worker
+    command: npx ts-node worker/index.ts
+    volumes:
+      - ..:/app
+    working_dir: /app
+    env_file:
+      - ../.env
+    depends_on:
+      - temporal
+      - postgres
