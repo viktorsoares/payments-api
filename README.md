@@ -19,7 +19,7 @@ O projeto segue uma arquitetura organizada com controllers, use cases, repositor
 ---
 
 ## Estrutura do projeto
-
+```
 payments-api/
 ├── src/
 │   ├── activities/
@@ -70,7 +70,7 @@ payments-api/
 ├── package.json
 ├── tsconfig.json
 └── README.md
-
+```
 
 ---
 
