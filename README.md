@@ -107,16 +107,6 @@ MERCADO_PAGO_NOTIFICATION_URL=https://SEU-ENDERECO-NGROK/api/webhooks/mercadopag
 
 ---
 
-## Testes
-
-Rodar testes unitários e de integração:
-
-```bash
-npm run test
-```
-
----
-
 ## Fluxo de pagamento
 
 1. O cliente cria um pagamento via `POST /api/payment`.  
